@@ -15,9 +15,27 @@ export default [
         sourceType: 'module'
       },
       globals: {
+        // Browser globals
         console: 'readonly',
         document: 'readonly',
-        window: 'readonly'
+        window: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        Element: 'readonly',
+        Node: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        DOMRect: 'readonly',
+        ResizeObserver: 'readonly',
+        MutationObserver: 'readonly',
+        DOMParser: 'readonly',
+        setTimeout: 'readonly',
+        // Node globals
+        process: 'readonly',
+        // Svelte globals
+        $state: 'readonly',
+        $effect: 'readonly',
+        $derived: 'readonly'
       }
     },
     plugins: {
@@ -35,13 +53,37 @@ export default [
       parser: svelteParser,
       parserOptions: {
         parser: tsParser
+      },
+      globals: {
+        // Browser globals
+        console: 'readonly',
+        document: 'readonly',
+        window: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        Element: 'readonly',
+        Node: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        DOMRect: 'readonly',
+        ResizeObserver: 'readonly',
+        MutationObserver: 'readonly',
+        DOMParser: 'readonly',
+        setTimeout: 'readonly',
+        // Node globals
+        process: 'readonly',
+        // Svelte globals
+        $state: 'readonly',
+        $effect: 'readonly',
+        $derived: 'readonly'
       }
     },
     plugins: {
       svelte
     },
     rules: {
-      ...svelte.configs.recommended.rules
+      ...svelte.configs.recommended.rules,
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
   },
   {

@@ -1,4 +1,4 @@
-import { Subject, filter, map, scan, merge, shareReplay, type Observable, type OperatorFunction } from 'rxjs';
+import { Subject, filter, map, merge, shareReplay, type Observable, type OperatorFunction } from 'rxjs';
 
 interface Action<T = void> {
   type: string;
@@ -27,7 +27,7 @@ export function dispatch<T>(action: ActionPayload<T>): void {
   
   // 액션 처리 후 잠시 대기하여 모든 reducer가 실행되도록 함
   setTimeout(() => {
-    console.log('Store:', JSON.stringify(storeValues, null, 2));
+    console.log('Store:', storeValues);
     console.groupEnd();
   }, 0);
 }
@@ -39,8 +39,8 @@ interface PipeableStream<T, P> {
   pipe(...operations: OperatorFunction<any, any>[]): Observable<any>;
 }
 
-type UnionToIntersection<U> = 
-  (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+// type UnionToIntersection<U> = 
+//   (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
 
 type GetActionPayloads<T extends Action<any>[]> = {
   [K in keyof T]: T[K] extends Action<infer P> ? P : never;
@@ -54,11 +54,11 @@ interface OnFunction<TState> {
   merge<T extends Action<any>[]>(...args: [...T, (state: TState, payload: GetActionPayloads<T>) => TState]): void;
 }
 
-export const stateObservables: Map<string, Observable<any>> = new Map();
+const stateObservables: Map<string, Observable<any>> = new Map();
 const stateGetters: Map<string, () => any> = new Map();
 const storeValues: Record<string, any> = {};
 
-export function getCurrentState(path: string): any {
+function getCurrentState(path: string): any {
   const parts = path.split('.');
   let current = storeValues;
   for (const part of parts) {
@@ -114,7 +114,7 @@ export function reducer<T>(
         ) as Observable<T>;
         
         collectStream(stream$);
-        return;
+        return undefined as any;
       }
       
       // 매퍼가 없으면 pipe 가능한 객체 반환
@@ -155,7 +155,7 @@ export function reducer<T>(
           ) as Observable<T>;
           
           collectStream(stream$);
-          return;
+          return undefined as any;
         }
         
         // 매퍼가 없으면 pipe 가능한 객체 반환
@@ -210,3 +210,43 @@ export function reducer<T>(
   // 항상 같은 getter 반환
   return stateGetters.get(pathString) as () => T;
 }
+
+// Observable을 reactive value로 변환하는 헬퍼
+// function fromObservable<T>(
+//   createStream: () => Observable<T> | null
+// ): () => T | null {
+//   console.log('fromObservable called');
+//   let value = $state<T | null>(null);
+//   let subscription: Subscription | null = null;
+//   
+//   $effect(() => {
+//     console.log('fromObservable effect running');
+//     // 이전 구독 정리
+//     if (subscription) {
+//       subscription.unsubscribe();
+//       subscription = null;
+//     }
+//     
+//     const stream = createStream();
+//     console.log('stream created:', stream);
+//     if (!stream) {
+//       value = null;
+//       return;
+//     }
+//     
+//     subscription = stream.subscribe(v => {
+//       console.log('fromObservable received value:', v);
+//       value = v;
+//     });
+//     
+//     return () => {
+//       console.log('fromObservable cleanup');
+//       if (subscription) {
+//         subscription.unsubscribe();
+//         subscription = null;
+//       }
+//     };
+//   });
+//   
+//   return () => value;
+// }

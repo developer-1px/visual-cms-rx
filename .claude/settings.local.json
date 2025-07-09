@@ -8,7 +8,26 @@
       "Bash(pnpm lint:*)",
       "Bash(pnpm check:*)",
       "Bash(git add:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:geoexamples.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(pnpm exec:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(tree:*)",
+      "WebFetch(domain:www.ncloud.com)",
+      "Bash(ls:*)",
+      "Bash(pnpm ls:*)",
+      "WebFetch(domain:tailwindcss.com)",
+      "Bash(pnpm list:*)",
+      "Bash(pkill:*)",
+      "Bash(pnpm test:ui:*)",
+      "Bash(pnpm test:*)",
+      "Bash(test:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }
