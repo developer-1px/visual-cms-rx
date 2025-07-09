@@ -1,28 +1,24 @@
 <script lang="ts">
-  import { counter$, increment, decrement, reset } from './counterStore';
+  import { dispatch } from './svelte-rx.svelte';
+  import { _증가하기, _감소하기, _리셋하기 } from './actions/counterActions';
+  import { useCounter, useCounterStep } from './counterStore';
   
-  let count = $state(0);
-  
-  $effect(() => {
-    const subscription = counter$.subscribe(value => {
-      count = value;
-    });
-    
-    return () => subscription.unsubscribe();
-  });
+  const count = $derived(useCounter());
+  const step = $derived(useCounterStep());
 </script>
 
-<button onclick={() => increment(1)}>
+<button onclick={() => dispatch(_증가하기(1))}>
   증가 +1
 </button>
 
 <div>카운트: {count}</div>
+<div>총 액션 횟수: {step}</div>
 
-<button onclick={() => decrement(1)}>
+<button onclick={() => dispatch(_감소하기(1))}>
   감소 -1
 </button>
 
-<button onclick={() => reset()}>
+<button onclick={() => dispatch(_리셋하기())}>
   리셋
 </button>
 

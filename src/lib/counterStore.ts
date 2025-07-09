@@ -1,22 +1,18 @@
-import { action, dispatch, reducer } from './svelte-rx';
-import { map } from 'rxjs';
+import { reducer } from './svelte-rx.svelte';
+import { _증가하기, _감소하기, _리셋하기 } from './actions/counterActions';
+import { storePath } from './store-path';
 
-export const _증가하기 = action<number>('_증가하기');
-export const _감소하기 = action<number>('_감소하기');
-export const _리셋하기 = action('_리셋하기');
+// Store 정의 및 hook 반환
+export const useCounter = reducer(storePath.counter.value, 0, on => {
+  on(_증가하기, (state, amount) => state + amount)
+  on(_감소하기, (state, amount) => state - amount)
+  on(_리셋하기, () => 0)
+})
 
-export const counter$ = reducer('counter/value', 0, on => [
-  on(_증가하기).pipe(
-    map(amount => (state: number) => state + amount)
-  ),
-  on(_감소하기).pipe(
-    map(amount => (state: number) => state - amount)
-  ),
-  on(_리셋하기).pipe(
-    map(() => () => 0)
-  )
-]);
 
-export const increment = (amount: number = 1) => dispatch(_증가하기(amount));
-export const decrement = (amount: number = 1) => dispatch(_감소하기(amount));
-export const reset = () => dispatch(_리셋하기());
+// Step reducer - 모든 액션에 대해 1씩 증가
+export const useCounterStep = reducer(storePath.counter.step, 0, on => {
+  // 모든 액션을 병합하여 카운트
+  on.merge(_증가하기, _감소하기, state => state + 1)
+  on(_리셋하기, () => 0)
+});
