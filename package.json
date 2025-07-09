@@ -1,0 +1,31 @@
+{
+  "name": "svelte-rx",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
+    "@tsconfig/svelte": "^5.0.4",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "eslint": "^9.30.1",
+    "eslint-plugin-svelte": "^3.10.1",
+    "svelte": "^5.35.2",
+    "svelte-check": "^4.2.2",
+    "svelte-eslint-parser": "^1.2.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.3"
+  },
+  "dependencies": {
+    "rxjs": "^7.8.2"
+  }
+}
