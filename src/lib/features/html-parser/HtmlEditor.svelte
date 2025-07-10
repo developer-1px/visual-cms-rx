@@ -88,6 +88,10 @@
 
 <!-- 하단 툴바 -->
 <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000]">
+  <!-- Debug: Show current mode -->
+  <div class="text-white text-xs mb-2 text-center bg-black/60 px-2 py-1 rounded">
+    Mode: {editorMode}
+  </div>
   <div class="flex items-center gap-1 p-2 bg-black/85 backdrop-blur-md rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] transition-transform">
     <button 
       class="flex items-center justify-center w-10 h-10 rounded-lg transition-all relative
@@ -139,33 +143,6 @@
   .html-editor {
     position: relative;
     min-height: 100vh;
-    padding: 20px;
-    font-family: system-ui, -apple-system, sans-serif;
-    line-height: 1.6;
-  }
-  
-  :global(.html-editor h1, .html-editor h2, .html-editor h3) {
-    font-weight: 700;
-    margin: 1em 0 0.5em;
-  }
-  
-  :global(.html-editor p) {
-    margin: 1em 0;
-  }
-  
-  :global(.html-editor button) {
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  
-  :global(.html-editor a) {
-    color: inherit;
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-  
-  :global(.html-editor a:hover) {
-    opacity: 0.8;
   }
   
   /* 선택 모드에서는 모든 요소가 default 커서 */

@@ -1,117 +1,131 @@
 <script lang="ts">
   import { dispatch } from '../../base/svelte-rx/svelte-rx.svelte';
   import { _선택하기 } from '../../actions/selection';
+  import { _편집모드켜기 } from '../../actions/editor/mode';
   import { toRelativeCoordinates } from '../../base/dom/coordinates';
+  import { getTypeColor } from '../../entities/editor/colors';
   
   import { useEditorMode } from '../../entities/editor/modeStore';
+  import { useSelectedId, useSelectedType } from '../../entities/selection/store';
+  import { 
+    selectElementWithSmartPolicy, 
+    filterSelectableElements
+  } from '../../base/dom/smartElementSelection';
   
+  // Store 값들
   const editorMode = $derived(useEditorMode());
-  const actualEditMode = $derived(editorMode === 'edit');
+  const selectedId = $derived(useSelectedId());
+  const selectedType = $derived(useSelectedType());
+  
+  // DOM 요소
   let overlayElement: HTMLDivElement = $state()!;
-  let hoveredElements = $state<HTMLElement[]>([]);
   
+  // Hover 상태
+  let hoveredId = $state<string | null>(null);
+  let hoveredType = $state<string | null>(null);
+  let hoveredRect = $state<DOMRect | null>(null);
+  let previousHoveredId = $state<string | null>(null);
   
-  // 현재 호버된 가장 상위 텍스트 요소가 있는지 확인
-  const hasTextHover = $derived(
-    hoveredElements.some(el => el.getAttribute('data-editable') === 'text')
-  );
-  
-  
-  
-  
-  let previousHoveredTextElement: HTMLElement | null = null;
-  
+  // 계산된 값들
+  const isEditMode = $derived(editorMode === 'edit');
+  const hoveredColor = $derived(hoveredType ? getTypeColor(hoveredType) : null);
+  const hasTextHover = $derived(hoveredType === 'text');
+
+  // Hover 효과 처리
   $effect(() => {
-    
-    // 이전 호버 효과 제거
-    if (previousHoveredTextElement) {
-      previousHoveredTextElement.style.textDecoration = '';
-      previousHoveredTextElement = null;
+    // 이전 hover 제거
+    if (previousHoveredId && previousHoveredId !== hoveredId) {
+      const prevElement = document.querySelector(`[data-node-id="${previousHoveredId}"]`);
+      prevElement?.removeAttribute('data-hover');
     }
     
-    if (hoveredElements.length === 0) {
-      return;
+    // 새로운 text hover 추가
+    if (hoveredId && hoveredType === 'text') {
+      const element = document.querySelector(`[data-node-id="${hoveredId}"]`);
+      element?.setAttribute('data-hover', 'true');
     }
     
-    // 텍스트 요소에만 underline 스타일 적용
-    hoveredElements.forEach((element) => {
-      const type = element.getAttribute('data-editable');
-      
-      // 텍스트 요소인 경우 underline 스타일 적용
-      if (type === 'text') {
-        element.style.textDecoration = 'underline';
-        element.style.textDecorationColor = 'rgba(34, 197, 94, 0.6)';
-        element.style.textDecorationThickness = '2px';
-        element.style.textUnderlineOffset = '2px';
-        element.style["text-decoration-skip-ink"] = 'none';
-        previousHoveredTextElement = element;
-      }
-    });
+    previousHoveredId = hoveredId;
     
     // cleanup
     return () => {
-      // 이전 호버 효과 제거
-      if (previousHoveredTextElement) {
-        previousHoveredTextElement.style.textDecoration = '';
-        previousHoveredTextElement = null;
+      if (previousHoveredId) {
+        const element = document.querySelector(`[data-node-id="${previousHoveredId}"]`);
+        element?.removeAttribute('data-hover');
       }
     };
   });
   
-  
   function handleOverlayClick(event: MouseEvent) {
-    // 선택 모드에서만 클릭으로 선택 가능
-    if (actualEditMode) return;
+    const element = getElementAtPoint(event.clientX, event.clientY);
+    if (!element) return;
     
-    const { clientX, clientY } = event;
-    
-    // 오버레이를 잠시 숨겨서 아래 요소들 탐색
-    overlayElement.style.pointerEvents = 'none';
-    const elements = document.elementsFromPoint(clientX, clientY);
-    overlayElement.style.pointerEvents = 'auto';
-    
-    // 편집 가능한 요소 찾기 (data-editable 속성을 가진 요소)
-    const selectable = elements.find(el => 
-      el instanceof HTMLElement && el.hasAttribute('data-editable')
-    ) as HTMLElement | undefined;
-    
-    if (selectable) {
-      const id = selectable.getAttribute('data-node-id')!;
-      const rect = selectable.getBoundingClientRect();
-      const containerRect = overlayElement.parentElement!.getBoundingClientRect();
-      
-      // 순수 함수로 좌표 보정
-      const adjustedRect = toRelativeCoordinates(rect, containerRect);
-      
-      dispatch(_선택하기({ id, rect: adjustedRect }));
-      
-      // 디버깅용 로그
-      console.log('Selected element:', { id, rect: adjustedRect });
+    const id = element.getAttribute('data-node-id')!;
+    const type = element.getAttribute('data-editable')!;
+
+    console.log(`[EditOverlay] Clicked element: id=${id}, type=${type} selectedType=${selectedType}`);
+
+    // 이미 선택된 텍스트를 다시 클릭하면 편집 모드로
+    if (id === selectedId && type === 'text' && selectedType === 'text') {
+      console.log('[EditOverlay] Switching to edit mode');
+      dispatch(_편집모드켜기());
+      return;
     }
+    
+    // 일반 선택
+    const rect = element.getBoundingClientRect();
+    const containerRect = overlayElement.parentElement!.getBoundingClientRect();
+    const adjustedRect = toRelativeCoordinates(rect, containerRect);
+    
+    dispatch(_선택하기({ id, rect: adjustedRect }));
   }
   
   function handleOverlayMouseMove(event: MouseEvent) {
-    // 모든 모드에서 hover 효과 표시
+    const element = getElementAtPoint(event.clientX, event.clientY);
     
-    const { clientX, clientY } = event;
-    
-    // 오버레이를 잠시 숨겨서 아래 요소들 탐색
-    overlayElement.style.pointerEvents = 'none';
-    const elements = document.elementsFromPoint(clientX, clientY);
-    overlayElement.style.pointerEvents = 'auto';
-    
-    // 편집 가능한 모든 요소 찾기 (중첩된 요소들 포함)
-    const editableElements = elements.filter(el => 
-      el instanceof HTMLElement && el.hasAttribute('data-editable')
-    ) as HTMLElement[];
-    
-    // 호버된 요소들 상태 업데이트
-    hoveredElements = editableElements;
+    if (element) {
+      const id = element.getAttribute('data-node-id');
+      const type = element.getAttribute('data-editable');
+      
+      // 선택된 요소는 hover하지 않음
+      if (id === selectedId) {
+        clearHoverState();
+        return;
+      }
+      
+      hoveredId = id;
+      hoveredType = type;
+      
+      // text가 아닌 요소들의 rect 계산
+      if (type !== 'text') {
+        const rect = element.getBoundingClientRect();
+        const containerRect = overlayElement.parentElement!.getBoundingClientRect();
+        hoveredRect = toRelativeCoordinates(rect, containerRect) as DOMRect;
+      } else {
+        hoveredRect = null;
+      }
+    } else {
+      clearHoverState();
+    }
   }
   
   function handleOverlayMouseLeave() {
-    // 마우스가 오버레이를 벗어나면 호버 상태 초기화
-    hoveredElements = [];
+    clearHoverState();
+  }
+  
+  function clearHoverState() {
+    hoveredId = null;
+    hoveredType = null;
+    hoveredRect = null;
+  }
+  
+  function getElementAtPoint(x: number, y: number): HTMLElement | null {
+    overlayElement.style.pointerEvents = 'none';
+    const elements = document.elementsFromPoint(x, y);
+    overlayElement.style.pointerEvents = 'auto';
+    
+    const selectableElements = filterSelectableElements(elements);
+    return selectElementWithSmartPolicy(selectableElements, selectedId) || null;
   }
 </script>
 
@@ -119,11 +133,25 @@
 <div 
   bind:this={overlayElement}
   class="edit-overlay"
-  class:text-cursor={hasTextHover && actualEditMode}
+  class:text-cursor={hasTextHover && isEditMode}
   onclick={handleOverlayClick}
   onmousemove={handleOverlayMouseMove}
   onmouseleave={handleOverlayMouseLeave}
 ></div>
+
+<!-- Hover 효과 표시 (text가 아닌 요소들만) -->
+{#if hoveredRect && hoveredColor && hoveredType !== 'text'}
+  <div 
+    class="hover-overlay"
+    style="
+      left: {hoveredRect.left}px;
+      top: {hoveredRect.top}px;
+      width: {hoveredRect.width}px;
+      height: {hoveredRect.height}px;
+      --hover-color: {hoveredColor};
+    "
+  ></div>
+{/if}
   
 
 <style>
@@ -142,5 +170,18 @@
     cursor: text;
   }
   
+  .hover-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: inset 0 0 0 2px var(--hover-color);
+    opacity: 0.5;
+  }
   
+  /* CSS를 통한 text hover 효과 */
+  :global([data-hover="true"][data-editable="text"]) {
+    text-decoration: underline !important;
+    text-decoration-color: #0066ff !important;
+    text-decoration-thickness: 2px !important;
+  }
 </style>

@@ -4,6 +4,7 @@
   import { _선택해제하기 } from '../../actions/selection';
   import { createRelativeBoundingRectObservable } from '../../base/dom/createRelativeBoundingRectObservable';
   import { observableState } from '../../base/svelte-rx/observableState.svelte';
+  import { getTypeColor } from '../../entities/editor/colors';
   
   const selectedId = $derived(useSelectedId());
   const boundingRects = $derived(useBoundingRects());
@@ -13,6 +14,32 @@
     if (!selectedId) return null;
     return document.querySelector(`[data-node-id="${selectedId}"]`) as HTMLElement | null;
   });
+  
+  // 선택된 요소의 타입
+  const selectedType = $derived.by(() => {
+    if (!selectedElement) return null;
+    return selectedElement.getAttribute('data-editable');
+  });
+  
+  // 표시용 타입 이름
+  const displayType = $derived.by(() => {
+    if (!selectedType) return 'Unknown';
+    
+    // 타입을 더 읽기 쉬운 형태로 변환
+    switch(selectedType) {
+      case 'text': return 'Text';
+      case 'repeat': return 'Repeat';
+      case 'icon': return 'Icon';
+      case 'image': return 'Image';
+      case 'link': return 'Link';
+      case 'block': return 'Block';
+      case 'section': return 'Section';
+      default: return selectedType || 'Unknown';
+    }
+  });
+  
+  // 타입별 색상
+  const typeColor = $derived(getTypeColor(selectedType));
   
   // 선택된 요소의 상대 좌표를 실시간으로 추적
   const rectGetter = observableState(
@@ -72,12 +99,11 @@
       top: {selectedRect.top}px;
       width: {selectedRect.width}px;
       height: {selectedRect.height}px;
+      --type-color: {typeColor};
     "
   >
     <div class="selection-info">
-      ID: {selectedId}
-      <br>
-      Size: {Math.round(selectedRect.width)} × {Math.round(selectedRect.height)}
+      {displayType}
     </div>
   </div>
 {/if}
@@ -100,21 +126,23 @@
   
   .selection-overlay {
     position: absolute;
-    border: 2px solid #0066ff;
-    background: rgba(0, 102, 255, 0.1);
+    border: 2px solid var(--type-color);
+    background: color-mix(in srgb, var(--type-color) 8%, transparent);
     pointer-events: none;
     z-index: 1000;
+    border-radius: 4px;
   }
   
   .selection-info {
     position: absolute;
-    top: -40px;
+    top: -24px;
     left: 0;
-    background: #0066ff;
+    background: var(--type-color);
     color: white;
-    padding: 4px 8px;
-    font-size: 12px;
-    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: 3px;
     white-space: nowrap;
   }
 </style>

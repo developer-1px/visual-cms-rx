@@ -36,3 +36,23 @@ export const useBoundingRects = reducer(storePath.selection.boundingRects, {} as
     return state;
   })
 })
+
+// computed: 현재 선택된 요소의 타입
+export const useSelectedType = reducer(storePath.selection.type, null as string | null, on => {
+  // selectedId와 document.nodes가 변경될 때마다 타입 계산
+  // on.combine을 사용하여 명확한 타입 추론
+  on.combine(
+    storePath.selection.selectedId,
+    storePath.editor.document.nodes,
+    (selectedId, nodes) => {
+      if (!selectedId || !nodes) return null;
+      
+      // Document 모델에서 node 찾기
+      const node = nodes.get(selectedId);
+      if (!node) return null;
+      
+      // node의 attributes에서 data-editable 타입 가져오기
+      return node.attributes?.['data-editable'] || null;
+    }
+  );
+})

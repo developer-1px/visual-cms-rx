@@ -16,8 +16,14 @@ export const useEditorMode = reducer(
   storePath.editor.mode, // path 객체를 직접 전달
   'select' as EditorMode, // 기본값: edit (기존 editMode.active: true와 동일)
   on => {
-    on(_모드변경, (_, mode) => mode);
-    on(_편집모드켜기, () => 'edit');
+    on(_모드변경, (_, mode) => {
+      console.log('[modeStore] 모드변경:', mode);
+      return mode;
+    });
+    on(_편집모드켜기, () => {
+      console.log('[modeStore] 편집모드켜기 triggered');
+      return 'edit';
+    });
     on(_보기모드켜기, () => 'view');
     on(_선택모드켜기, () => 'select');
     
@@ -26,3 +32,7 @@ export const useEditorMode = reducer(
   }
 );
 
+// computed 예제: mode가 'edit'인지 확인하는 boolean 값
+export const useIsEditMode = reducer('editor.isEdit', false, on => {
+  on(storePath.editor.mode, (mode) => mode === 'edit')
+});

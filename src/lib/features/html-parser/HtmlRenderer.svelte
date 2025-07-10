@@ -30,6 +30,30 @@
     
     return [before, selected, after];
   }
+  
+  function reconstructSvgHTML(node: any): string {
+    if (node.type === 'text') {
+      return node.textContent || '';
+    }
+    
+    if (node.type === 'element') {
+      const tag = node.tagName;
+      const attrs = node.attributes || {};
+      
+      // 속성을 문자열로 변환
+      const attrString = Object.entries(attrs)
+        .map(([key, value]) => `${key}="${value}"`)
+        .join(' ');
+      
+      // 자식 요소들 재귀적으로 처리
+      const children = node.children || [];
+      const childrenHTML = children.map((child: any) => reconstructSvgHTML(child)).join('');
+      
+      return `<${tag}${attrString ? ' ' + attrString : ''}>${childrenHTML}</${tag}>`;
+    }
+    
+    return '';
+  }
 </script>
 
 {#if node.type === 'text' && node.textContent}
@@ -50,22 +74,53 @@
   </span>
 {:else if node.type === 'element'}
   {@const Tag = node.tagName || 'div'}
-  {@const isRepeatable = ['li', 'tr', 'article', 'section'].includes(Tag) || 
-    node.attributes?.class?.includes('card') || 
-    node.attributes?.class?.includes('item') ||
-    node.attributes?.class?.includes('group')}
-  <svelte:element 
-    this={Tag}
-    {...node.attributes}
-    data-node-id={node.id}
-    data-editable={isRepeatable ? 'repeat' : undefined}
-  >
-    {#if node.children}
-      {#each node.children as child (child.id)}
-        <HtmlRenderer node={child} {selection} {onTextClick} />
-      {/each}
-    {/if}
-  </svelte:element>
+  {@const editableType = node.attributes?.['data-editable']}
+  
+  {#if Tag === 'img'}
+    <img
+      {...node.attributes}
+      data-node-id={node.id}
+      data-editable="image"
+      style="display: inline-block; cursor: pointer; {node.attributes?.style || ''}"
+    />
+  {:else if Tag === 'svg'}
+    <!-- SVG는 @html로 렌더링 (namespace 이슈 해결) -->
+    {@const svgContent = reconstructSvgHTML(node)}
+    <div 
+      data-node-id={node.id}
+      data-editable="icon"
+      style="display: inline-block; cursor: pointer; {node.attributes?.style || ''}"
+    >
+      {@html svgContent}
+    </div>
+  {:else if Tag === 'a' || Tag === 'button'}
+    <svelte:element 
+      this={Tag}
+      {...node.attributes}
+      data-node-id={node.id}
+      data-editable="link"
+      style="display: inline-block; cursor: pointer; {node.attributes?.style || ''}"
+    >
+      {#if node.children}
+        {#each node.children as child (child.id)}
+          <HtmlRenderer node={child} {selection} {onTextClick} />
+        {/each}
+      {/if}
+    </svelte:element>
+  {:else}
+    <svelte:element 
+      this={Tag}
+      {...node.attributes}
+      data-node-id={node.id}
+      data-editable={editableType}
+    >
+      {#if node.children}
+        {#each node.children as child (child.id)}
+          <HtmlRenderer node={child} {selection} {onTextClick} />
+        {/each}
+      {/if}
+    </svelte:element>
+  {/if}
 {/if}
 
 <style>

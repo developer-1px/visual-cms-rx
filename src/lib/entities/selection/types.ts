@@ -12,4 +12,5 @@ export interface ResizePayload {
 export interface SelectionState {
   selectedId: string | null;
   boundingRects: Record<string, DOMRect>;
+  type: string | null; // computed: 현재 선택된 요소의 타입
 }

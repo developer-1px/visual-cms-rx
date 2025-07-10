@@ -42,6 +42,15 @@ export interface StoreSchema {
     /** 에디터 모드 */
     mode: 'view' | 'edit' | 'select';
   };
+  
+  /**
+   * 클립보드 상태
+   */
+  clipboard: {
+    type: 'text' | 'element' | null;
+    content: string | null;
+    nodeId: string | null;
+  };
 }
 
 /**

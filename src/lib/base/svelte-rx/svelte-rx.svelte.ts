@@ -1,5 +1,8 @@
 import { Subject, filter, map, merge, shareReplay, type Observable, type OperatorFunction, type Subscription } from 'rxjs';
 
+// computed 함수들을 export
+export { computed, derive } from './computed.svelte';
+
 interface Action<T = void> {
   type: string;
   (payload: T): ActionPayload<T>;
@@ -10,7 +13,7 @@ interface ActionPayload<T = void> {
   payload: T;
 }
 
-const actionSubject = new Subject<ActionPayload<any>>();
+const actionSubject = new Subject<ActionPayload<unknown>>();
 let actionCounter = 0;
 
 // DevTool을 위한 액션 스트림 export
@@ -54,26 +57,57 @@ interface PipeableStream<T, P> {
   pipe<R>(op: OperatorFunction<[T, P], R>): Observable<R>;
   pipe<A, B>(op1: OperatorFunction<[T, P], A>, op2: OperatorFunction<A, B>): Observable<B>;
   pipe<A, B, C>(op1: OperatorFunction<[T, P], A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>): Observable<C>;
-  pipe(...operations: OperatorFunction<any, any>[]): Observable<any>;
+  pipe(...operations: OperatorFunction<unknown, unknown>[]): Observable<unknown>;
 }
 
-// type UnionToIntersection<U> = 
-//   (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
 
-type GetActionPayloads<T extends Action<any>[]> = {
+type GetActionPayloads<T extends Action<unknown>[]> = {
   [K in keyof T]: T[K] extends Action<infer P> ? P : never;
 }[number];
+
+// 배열에서 값 타입들 추출
+type GetPathValues<T extends readonly unknown[]> = {
+  [K in keyof T]: T[K];
+};
 
 interface OnFunction<TState> {
   <P>(action: Action<P>): PipeableStream<TState, P>;
   <P>(action: Action<P>, mapper: (state: TState, payload: P) => TState): void;
   
-  merge<T extends Action<any>[]>(...actions: T): PipeableStream<TState, GetActionPayloads<T>>;
-  merge<T extends Action<any>[]>(...args: [...T, (state: TState, payload: GetActionPayloads<T>) => TState]): void;
+  // computed 지원을 위한 오버로드 - PathProxy와 타입 추론 지원
+  <TPath>(dependency: TPath, mapper: (value: TPath) => TState): void;
+  
+  // 배열 타입 추론
+  <TPaths extends readonly unknown[]>(
+    dependencies: TPaths,
+    mapper: (...values: GetPathValues<TPaths>) => TState
+  ): void;
+  
+  merge<T extends Action<unknown>[]>(...actions: T): PipeableStream<TState, GetActionPayloads<T>>;
+  merge<T extends Action<unknown>[]>(...args: [...T, (state: TState, payload: GetActionPayloads<T>) => TState]): void;
+  
+  // combine 메서드 - 여러 경로를 명시적으로 결합
+  combine<T1>(p1: T1, mapper: (v1: T1) => TState): void;
+  combine<T1, T2>(
+    p1: T1, p2: T2,
+    mapper: (v1: T1, v2: T2) => TState
+  ): void;
+  combine<T1, T2, T3>(
+    p1: T1, p2: T2, p3: T3,
+    mapper: (v1: T1, v2: T2, v3: T3) => TState
+  ): void;
+  combine<T1, T2, T3, T4>(
+    p1: T1, p2: T2, p3: T3, p4: T4,
+    mapper: (v1: T1, v2: T2, v3: T3, v4: T4) => TState
+  ): void;
+  combine<T1, T2, T3, T4, T5>(
+    p1: T1, p2: T2, p3: T3, p4: T4, p5: T5,
+    mapper: (v1: T1, v2: T2, v3: T3, v4: T4, v5: T5) => TState
+  ): void;
 }
 
-const stateObservables: Map<string, Observable<any>> = new Map();
-const stateGetters: Map<string, () => any> = new Map();
+const stateObservables: Map<string, Observable<unknown>> = new Map();
+const stateGetters: Map<string, () => unknown> = new Map();
 const storeValues: Record<string, any> = {};
 
 // 스토어 변경 추적을 위한 버전
@@ -83,21 +117,29 @@ let storeVersion = $state(0);
 const stateChangeSubject = new Subject<{ path: string; value: any }>();
 export const stateChange$ = stateChangeSubject.asObservable();
 
-// 전체 스토어 상태를 반환하는 함수
-export function getStoreValues() {
-  return storeValues;
+// ============= 유틸리티 함수 =============
+
+// PathProxy를 string으로 변환
+function extractPath(pathOrProxy: unknown): string {
+  return typeof pathOrProxy === 'string' ? pathOrProxy : (pathOrProxy as any).toString();
 }
 
-export function getAllStoreValues() {
-  return storeValues;
+// PathProxy인지 확인 (action이 아닌 경우)
+function isPathLike(obj: unknown): boolean {
+  return typeof obj === 'string' || 
+    (obj !== null && typeof obj === 'object' && 'toString' in obj && !('type' in obj));
 }
 
-// 스토어 버전을 반환하는 함수 (변경 감지용)
-export function getStoreVersion() {
-  return storeVersion;
+// Observable 생성 또는 기존 것 반환
+function getOrCreateObservable<T>(path: string, factory: () => Observable<T>): Observable<T> {
+  if (!stateObservables.has(path)) {
+    stateObservables.set(path, factory().pipe(shareReplay(1)));
+  }
+  return stateObservables.get(path) as Observable<T>;
 }
 
-function getCurrentState(path: string): any {
+
+export function getCurrentState(path: string): any {
   const parts = path.split('.');
   let current = storeValues;
   for (const part of parts) {
@@ -128,13 +170,52 @@ function setCurrentState(path: string, value: any): void {
 }
 
 
-export function reducer<T, P extends string | { toString(): string }>(
-  path: P,
+export function reducer<T>(
+  path: T, // path는 T 타입을 받음 - PathProxy가 이미 타입을 가지고 있으므로
   initialValue: T,
   setupFn: (on: OnFunction<T>) => void
 ): () => T {
   // path를 string으로 변환
-  const pathString = typeof path === 'string' ? path : path.toString();
+  const pathString = extractPath(path);
+  
+  // setupFn을 먼저 실행해서 computed 여부 확인
+  const tempOn: OnFunction<T> = Object.assign(
+    function (...args: any[]) {
+      const firstArg = args[0];
+      // PathProxy 또는 string 확인
+      const isPathLike = typeof firstArg === 'string' || (firstArg && typeof firstArg.toString === 'function' && !firstArg.type);
+      
+      if (isPathLike || Array.isArray(firstArg)) {
+        // computed의 경우 초기값 계산
+        if (!Array.isArray(firstArg)) {
+          const mapper = args[1] as (value: any) => T;
+          const path = extractPath(firstArg);
+          const value = getCurrentState(path);
+          initialValue = mapper(value);
+        } else {
+          const mapper = args[1] as (...values: any[]) => T;
+          const paths = firstArg.map(extractPath);
+          const values = paths.map(path => getCurrentState(path));
+          initialValue = mapper(...values);
+        }
+      }
+      return undefined as any;
+    },
+    { 
+      merge: () => undefined as any,
+      combine: (...args: any[]) => {
+        // combine의 경우도 computed로 처리
+        const mapper = args[args.length - 1] as (...values: any[]) => T;
+        const paths = args.slice(0, -1).map(extractPath);
+        const values = paths.map(path => getCurrentState(path));
+        initialValue = mapper(...values);
+        return undefined as any;
+      }
+    }
+  );
+  
+  // 첫 번째 패스: computed 확인 및 초기값 계산
+  setupFn(tempOn as any);
   
   // 초기값을 store에 설정
   setCurrentState(pathString, initialValue);
@@ -147,13 +228,53 @@ export function reducer<T, P extends string | { toString(): string }>(
   };
   
   const on: OnFunction<T> = Object.assign(
-    function <P>(action: Action<P>, mapper?: (state: T, payload: P) => T) {
+    function (...args: any[]) {
+      const firstArg = args[0];
+      const secondArg = args[1];
+      
+      
+      // Case 1: on(string or PathProxy, mapper) - single dependency computed
+      if (isPathLike(firstArg) && typeof secondArg === 'function') {
+        const dependency = extractPath(firstArg);
+        const mapper = secondArg as (value: any) => T;
+        
+        const stream$ = stateChangeSubject.pipe(
+          filter(change => change.path === dependency),
+          map(change => mapper(change.value))
+        ) as Observable<T>;
+        
+        collectStream(stream$);
+        return undefined as any;
+      }
+      
+      // Case 2: on(array of strings or PathProxies, mapper) - multiple dependencies computed
+      if (Array.isArray(firstArg) && typeof secondArg === 'function') {
+        const dependencies = firstArg.map(extractPath);
+        const mapper = secondArg as (...values: any[]) => T;
+        
+        const stream$ = stateChangeSubject.pipe(
+          filter(change => dependencies.some(dep => 
+            dep.startsWith(change.path) || change.path.startsWith(dep)
+          )),
+          map(() => {
+            const values = dependencies.map(dep => getCurrentState(dep));
+            return mapper(...values);
+          })
+        ) as Observable<T>;
+        
+        collectStream(stream$);
+        return undefined as any;
+      }
+      
+      // Case 3: on(action) or on(action, mapper) - original action handling
+      const action = firstArg as Action<any>;
+      const mapper = secondArg as ((state: T, payload: any) => T) | undefined;
+      
       // 매퍼 함수가 제공되면 바로 처리
       if (mapper) {
         const stream$ = actionSubject.pipe(
           filter(actionPayload => actionPayload.type === action.type),
-          filter((_): _ is ActionPayload<P> => true),
-          map((actionPayload: ActionPayload<P>) => {
+          map((actionPayload: ActionPayload<any>) => {
             const currentState = getCurrentState(pathString) as T;
             return mapper(currentState, actionPayload.payload);
           })
@@ -168,10 +289,9 @@ export function reducer<T, P extends string | { toString(): string }>(
         pipe: (...operators: any[]) => {
           const stream$ = actionSubject.pipe(
             filter(actionPayload => actionPayload.type === action.type),
-            filter((_): _ is ActionPayload<P> => true),
-            map((actionPayload: ActionPayload<P>) => {
+            map((actionPayload: ActionPayload<any>) => {
               const currentState = getCurrentState(pathString) as T;
-              return [currentState, actionPayload.payload] as [T, P];
+              return [currentState, actionPayload.payload] as [T, any];
             }),
             ...(operators as [])
           ) as Observable<T>;
@@ -222,6 +342,25 @@ export function reducer<T, P extends string | { toString(): string }>(
             return stream$;
           }
         };
+      },
+      combine(...args: any[]) {
+        // 마지막 인자는 항상 mapper 함수
+        const mapper = args[args.length - 1] as (...values: any[]) => T;
+        const paths = args.slice(0, -1).map(extractPath);
+        
+        // 배열 형태로 처리
+        const stream$ = stateChangeSubject.pipe(
+          filter(change => paths.some(path => 
+            path.startsWith(change.path) || change.path.startsWith(path)
+          )),
+          map(() => {
+            const values = paths.map(path => getCurrentState(path));
+            return mapper(...values);
+          })
+        ) as Observable<T>;
+        
+        collectStream(stream$);
+        return undefined as any;
       }
     }
   );
@@ -230,22 +369,21 @@ export function reducer<T, P extends string | { toString(): string }>(
   setupFn(on);
   
   // 모든 스트림 구독하고 상태 업데이트
-  const state$ = merge(...streams).pipe(
-    map(newState => {
-      setCurrentState(pathString, newState);
-      return newState;
-    }),
-    shareReplay(1)
+  const state$ = getOrCreateObservable(pathString, () => 
+    merge(...streams).pipe(
+      map(newState => {
+        setCurrentState(pathString, newState);
+        return newState;
+      })
+    )
   );
-  
-  stateObservables.set(pathString, state$);
   
   // getter를 만들어서 저장 (memoization)
   if (!stateGetters.has(pathString)) {
     let value = $state<T>(initialValue);
     
     // 구독 설정 및 추적
-    const subscription = state$.subscribe(newValue => {
+    const subscription = state$.subscribe((newValue: T) => {
       value = newValue;
     });
     activeSubscriptions.add(subscription);
@@ -257,43 +395,3 @@ export function reducer<T, P extends string | { toString(): string }>(
   // 항상 같은 getter 반환
   return stateGetters.get(pathString) as () => T;
 }
-
-// Observable을 reactive value로 변환하는 헬퍼
-// function fromObservable<T>(
-//   createStream: () => Observable<T> | null
-// ): () => T | null {
-//   console.log('fromObservable called');
-//   let value = $state<T | null>(null);
-//   let subscription: Subscription | null = null;
-//   
-//   $effect(() => {
-//     console.log('fromObservable effect running');
-//     // 이전 구독 정리
-//     if (subscription) {
-//       subscription.unsubscribe();
-//       subscription = null;
-//     }
-//     
-//     const stream = createStream();
-//     console.log('stream created:', stream);
-//     if (!stream) {
-//       value = null;
-//       return;
-//     }
-//     
-//     subscription = stream.subscribe(v => {
-//       console.log('fromObservable received value:', v);
-//       value = v;
-//     });
-//     
-//     return () => {
-//       console.log('fromObservable cleanup');
-//       if (subscription) {
-//         subscription.unsubscribe();
-//         subscription = null;
-//       }
-//     };
-//   });
-//   
-//   return () => value;
-// }
