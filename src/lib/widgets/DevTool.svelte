@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { actionStream$, stateChange$ } from '../base/svelte-rx/svelte-rx.svelte';
+  import { actionStream$, stateChange$, storeValues } from '../base/svelte-rx/svelte-rx.svelte';
   import { ChevronDown, ChevronRight, Pin, Eye, EyeOff, RotateCcw } from 'lucide-svelte';
   
   // 상태 및 액션 데이터
@@ -64,7 +64,7 @@
   // 초기 상태 로드
   onMount(() => {
     loadSettings();
-    currentState = {}; // TODO: implement store tracking
+    currentState = { ...storeValues };
   });
   
   // 액션 스트림 구독
@@ -77,7 +77,7 @@
     // 상태 변경 구독
     const stateSub = stateChange$.subscribe(() => {
       untrack(() => {
-        currentState = {}; // TODO: implement store tracking
+        currentState = { ...storeValues };
       });
     });
     
@@ -211,7 +211,7 @@
     if (value === null) return '#666';
     if (value === undefined) return '#666';
     if (typeof value === 'string') return '#ce9178';
-    if (typeof value === 'number') return '#b5cea8';
+    if (typeof value === 'number') return '#b5cea8';d
     if (typeof value === 'boolean') return '#569cd6';
     if (typeof value === 'function') return '#dcdcaa';
     return '#d4d4d4';

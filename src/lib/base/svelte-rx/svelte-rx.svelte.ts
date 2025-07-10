@@ -108,7 +108,7 @@ interface OnFunction<TState> {
 
 const stateObservables: Map<string, Observable<unknown>> = new Map();
 const stateGetters: Map<string, () => unknown> = new Map();
-const storeValues: Record<string, any> = {};
+export const storeValues: Record<string, any> = {};
 
 // 스토어 변경 추적을 위한 버전
 let storeVersion = $state(0);
