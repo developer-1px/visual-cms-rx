@@ -1,4 +1,4 @@
-import { Subject, filter, map, merge, shareReplay, type Observable, type OperatorFunction } from 'rxjs';
+import { Subject, filter, map, merge, shareReplay, type Observable, type OperatorFunction, type Subscription } from 'rxjs';
 
 interface Action<T = void> {
   type: string;
@@ -12,6 +12,24 @@ interface ActionPayload<T = void> {
 
 const actionSubject = new Subject<ActionPayload<any>>();
 let actionCounter = 0;
+
+// DevTool을 위한 액션 스트림 export
+export const actionStream$ = actionSubject.asObservable();
+
+// HMR을 위한 subscription 추적
+const activeSubscriptions = new Set<Subscription>();
+
+// HMR cleanup
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    console.log('[svelte-rx] HMR cleanup: unsubscribing', activeSubscriptions.size, 'subscriptions');
+    activeSubscriptions.forEach(sub => sub.unsubscribe());
+    activeSubscriptions.clear();
+    stateObservables.clear();
+    stateGetters.clear();
+    // storeValues는 상태 유지를 위해 clear하지 않음
+  });
+}
 
 export function action<T = void>(type: string): Action<T> {
   const actionCreator = (payload: T) => ({ type, payload });
@@ -58,6 +76,27 @@ const stateObservables: Map<string, Observable<any>> = new Map();
 const stateGetters: Map<string, () => any> = new Map();
 const storeValues: Record<string, any> = {};
 
+// 스토어 변경 추적을 위한 버전
+let storeVersion = $state(0);
+
+// 상태 변경 알림을 위한 Subject
+const stateChangeSubject = new Subject<{ path: string; value: any }>();
+export const stateChange$ = stateChangeSubject.asObservable();
+
+// 전체 스토어 상태를 반환하는 함수
+export function getStoreValues() {
+  return storeValues;
+}
+
+export function getAllStoreValues() {
+  return storeValues;
+}
+
+// 스토어 버전을 반환하는 함수 (변경 감지용)
+export function getStoreVersion() {
+  return storeVersion;
+}
+
 function getCurrentState(path: string): any {
   const parts = path.split('.');
   let current = storeValues;
@@ -80,14 +119,21 @@ function setCurrentState(path: string, value: any): void {
   current[parts[parts.length - 1]] = value;
   
   console.log(`[${path}]:`, prevState, '→', value);
+  
+  // 스토어 버전 증가 (변경 추적)
+  storeVersion++;
+  
+  // 상태 변경 알림
+  stateChangeSubject.next({ path, value });
 }
 
-export function reducer<T>(
-  path: string | { toString(): string },
+
+export function reducer<T, P extends string | { toString(): string }>(
+  path: P,
   initialValue: T,
   setupFn: (on: OnFunction<T>) => void
-) {
-  // path가 객체면 toString() 호출
+): () => T {
+  // path를 string으로 변환
   const pathString = typeof path === 'string' ? path : path.toString();
   
   // 초기값을 store에 설정
@@ -198,10 +244,11 @@ export function reducer<T>(
   if (!stateGetters.has(pathString)) {
     let value = $state<T>(initialValue);
     
-    // 구독 설정
-    state$.subscribe(newValue => {
+    // 구독 설정 및 추적
+    const subscription = state$.subscribe(newValue => {
       value = newValue;
     });
+    activeSubscriptions.add(subscription);
     
     const getter = () => value;
     stateGetters.set(pathString, getter);

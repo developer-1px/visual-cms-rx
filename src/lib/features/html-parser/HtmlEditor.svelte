@@ -11,9 +11,11 @@
     _실행취소하기,
     _다시실행하기 
   } from './editorStore';
-  import EditOverlay from '../../EditOverlay.svelte';
-  import SelectionOverlay from '../../SelectionOverlay.svelte';
-  import { useEditMode, _편집모드전환 } from '../../editModeStore';
+  import EditOverlay from '../../modules/editor/EditOverlay.svelte';
+  import SelectionOverlay from '../../modules/editor/SelectionOverlay.svelte';
+  import { useEditorMode } from '../../entities/editor/modeStore';
+  import { _편집모드전환 } from '../../actions/editor/mode';
+  import { Edit3, MousePointer } from 'lucide-svelte';
   
   interface Props {
     html: string;
@@ -25,7 +27,8 @@
   const editorState = $derived(useEditorState());
   const document = $derived(editorState.document);
   const selection = $derived(editorState.selection);
-  const isEditMode = $derived(useEditMode());
+  const editorMode = $derived(useEditorMode());
+  const isEditMode = $derived(editorMode === 'edit');
   
   onMount(() => {
     // Parse the HTML and set it in the store
@@ -83,22 +86,38 @@
 
 <svelte:window on:keydown={handleKeyDown} />
 
-<!-- 편집 모드 토글 버튼 -->
-<div class="edit-mode-controls">
-  <button 
-    class="edit-mode-toggle"
-    onclick={() => dispatch(_편집모드전환(!isEditMode))}
-  >
-    {isEditMode ? '편집 모드 끄기' : '편집 모드 켜기'}
-  </button>
-  <span class="edit-mode-status">
-    {isEditMode ? '편집 모드 ON' : '편집 모드 OFF'}
-  </span>
+<!-- 하단 툴바 -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000]">
+  <div class="flex items-center gap-1 p-2 bg-black/85 backdrop-blur-md rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.2)] hover:scale-[1.02] transition-transform">
+    <button 
+      class="flex items-center justify-center w-10 h-10 rounded-lg transition-all relative
+        {!isEditMode ? 'bg-blue-500/30 text-blue-300' : 'text-white/60 hover:bg-white/10 hover:text-white/90 active:scale-95'}"
+      onclick={() => dispatch(_편집모드전환(false))}
+      title="선택 모드"
+    >
+      <MousePointer size={20} />
+      {#if !isEditMode}
+        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-blue-500 rounded-sm"></span>
+      {/if}
+    </button>
+    <div class="w-px h-6 bg-white/10 mx-1"></div>
+    <button 
+      class="flex items-center justify-center w-10 h-10 rounded-lg transition-all relative
+        {isEditMode ? 'bg-blue-500/30 text-blue-300' : 'text-white/60 hover:bg-white/10 hover:text-white/90 active:scale-95'}"
+      onclick={() => dispatch(_편집모드전환(true))}
+      title="편집 모드"
+    >
+      <Edit3 size={20} />
+      {#if isEditMode}
+        <span class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-blue-500 rounded-sm"></span>
+      {/if}
+    </button>
+  </div>
 </div>
 
 <div 
   bind:this={containerRef}
-  class="html-editor"
+  class="html-editor {!isEditMode ? 'select-mode' : ''}"
   onclick={handleContainerClick}
 >
   {#if document.root}
@@ -109,8 +128,8 @@
     />
   {/if}
   
-  <!-- 편집 모드 오버레이 -->
-  <EditOverlay {isEditMode} />
+  <!-- 호버 및 선택 오버레이 (선택/편집 모드 둘 다에서 작동) -->
+  <EditOverlay />
   
   <!-- 선택 영역 표시 -->
   <SelectionOverlay />
@@ -149,38 +168,10 @@
     opacity: 0.8;
   }
   
-  .edit-mode-controls {
-    position: fixed;
-    top: 100px;
-    right: 20px;
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: white;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  /* 선택 모드에서는 모든 요소가 default 커서 */
+  .html-editor.select-mode,
+  .html-editor.select-mode :global(*) {
+    cursor: default !important;
   }
   
-  .edit-mode-toggle {
-    padding: 8px 16px;
-    background: #0066ff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  
-  .edit-mode-toggle:hover {
-    background: #0052cc;
-  }
-  
-  .edit-mode-status {
-    font-size: 0.875rem;
-    color: #666;
-    font-weight: 500;
-  }
 </style>

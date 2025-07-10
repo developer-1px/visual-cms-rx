@@ -1,6 +1,6 @@
 import { reducer } from '../../base/svelte-rx/svelte-rx.svelte';
-import { _선택하기, _선택해제하기, _크기변경하기, _컨텐츠변경하기 } from './actions';
-import { storePath } from '../../base/svelte-rx/store-path';
+import { _선택하기, _선택해제하기, _크기변경하기, _컨텐츠변경하기 } from '../../actions/selection';
+import { storePath } from '../storePath';
 
 // 선택된 ID 관리
 export const useSelectedId = reducer(storePath.selection.selectedId, null as string | null, on => {

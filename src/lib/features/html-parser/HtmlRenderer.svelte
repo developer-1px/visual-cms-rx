@@ -36,15 +36,14 @@
   {@const isSelected = selection?.nodeId === node.id}
   {@const textParts = renderText(node.textContent, node.id, isSelected)}
   
-  <span 
-    class="text-node"
-    class:selectable={!!onTextClick}
+  <span
+    style="display: inline-block; cursor: text;"
     data-editable="text"
     data-node-id={node.id}
     onclick={(e) => handleTextClick(e, node.id)}
   >
     {#if Array.isArray(textParts)}
-      {textParts[0]}<span class="selected-text">{textParts[1]}</span>{textParts[2]}
+      {textParts[0]}<span>{textParts[1]}</span>{textParts[2]}
     {:else}
       {textParts}
     {/if}
@@ -70,16 +69,4 @@
 {/if}
 
 <style>
-  .text-node.selectable {
-    cursor: text;
-  }
-  
-  .text-node.selectable:hover {
-    background-color: rgba(0, 123, 255, 0.1);
-  }
-  
-  .selected-text {
-    background-color: rgba(0, 123, 255, 0.3);
-    color: #000;
-  }
 </style>

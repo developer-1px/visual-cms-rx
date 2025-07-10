@@ -27,7 +27,16 @@
       "Bash(pnpm test:ui:*)",
       "Bash(pnpm test:*)",
       "Bash(test:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(for:*)",
+      "Bash(do mv \"$f\" \"20250710-$f#20250109-\")",
+      "Bash(done)",
+      "Bash(do mv \"$f\" \"20250709-$f#20250110-\")",
+      "Bash(pnpm preview:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

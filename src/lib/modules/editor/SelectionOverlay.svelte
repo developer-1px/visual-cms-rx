@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { dispatch } from './base/svelte-rx/svelte-rx.svelte';
-  import { useSelectedId, useBoundingRects, _선택해제하기 } from './entities/selection';
-  import { createRelativeBoundingRectObservable } from './base/dom/createRelativeBoundingRectObservable';
-  import { observableState } from './base/svelte-rx/observableState.svelte';
+  import { dispatch } from '../../base/svelte-rx/svelte-rx.svelte';
+  import { useSelectedId, useBoundingRects } from '../../entities/selection/store';
+  import { _선택해제하기 } from '../../actions/selection';
+  import { createRelativeBoundingRectObservable } from '../../base/dom/createRelativeBoundingRectObservable';
+  import { observableState } from '../../base/svelte-rx/observableState.svelte';
   
   const selectedId = $derived(useSelectedId());
   const boundingRects = $derived(useBoundingRects());

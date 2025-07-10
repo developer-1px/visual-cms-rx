@@ -1,5 +1,5 @@
 import { Observable, combineLatest } from 'rxjs';
-import { map, distinctUntilChanged, shareReplay } from 'rxjs/operators';
+import { map, distinctUntilChanged, share } from 'rxjs/operators';
 import { createBoundingRectObservable } from './createBoundingRectObservable';
 import { toRelativeCoordinates } from './coordinates';
 
@@ -28,6 +28,6 @@ export function createRelativeBoundingRectObservable(
       a.width === b.width && 
       a.height === b.height
     ),
-    shareReplay(1)
+    share() // shareReplay(1) 대신 share() 사용하여 구독자가 없을 때 자동 정리
   );
 }

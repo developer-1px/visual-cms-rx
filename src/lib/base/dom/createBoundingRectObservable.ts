@@ -1,5 +1,5 @@
 import { Observable, merge, fromEvent, animationFrameScheduler } from 'rxjs';
-import { map, throttleTime, distinctUntilChanged, shareReplay } from 'rxjs/operators';
+import { map, throttleTime, distinctUntilChanged, share } from 'rxjs/operators';
 
 export function createBoundingRectObservable(element: HTMLElement): Observable<DOMRect> {
   // ResizeObserver Observable
@@ -36,6 +36,6 @@ export function createBoundingRectObservable(element: HTMLElement): Observable<D
       a.width === b.width && 
       a.height === b.height
     ),
-    shareReplay(1)
+    share() // shareReplay(1) 대신 share() 사용하여 구독자가 없을 때 자동 정리
   );
 }
