@@ -139,13 +139,16 @@ function getOrCreateObservable<T>(path: string, factory: () => Observable<T>): O
 }
 
 
-export function getCurrentState(path: string): any {
-  const parts = path.split('.');
-  let current = storeValues;
+export function getCurrentState<T>(path: T): T {
+  const parts = extractPath(path).split('.');
+  let current = storeValues
   for (const part of parts) {
+    if (current == null || typeof current !== 'object') {
+      return undefined as T;
+    }
     current = current[part];
   }
-  return current;
+  return current as T;
 }
 
 function setCurrentState(path: string, value: any): void {
@@ -253,9 +256,12 @@ export function reducer<T>(
         const mapper = secondArg as (...values: any[]) => T;
         
         const stream$ = stateChangeSubject.pipe(
-          filter(change => dependencies.some(dep => 
-            dep.startsWith(change.path) || change.path.startsWith(dep)
-          )),
+          filter(change => dependencies.some(dep => {
+            // 정확한 경로 매칭 또는 상위 경로 변경 감지
+            return change.path === dep || 
+                   change.path.startsWith(dep + '.') ||
+                   dep.startsWith(change.path + '.');
+          })),
           map(() => {
             const values = dependencies.map(dep => getCurrentState(dep));
             return mapper(...values);
@@ -350,9 +356,12 @@ export function reducer<T>(
         
         // 배열 형태로 처리
         const stream$ = stateChangeSubject.pipe(
-          filter(change => paths.some(path => 
-            path.startsWith(change.path) || change.path.startsWith(path)
-          )),
+          filter(change => paths.some(path => {
+            // 정확한 경로 매칭 또는 상위 경로 변경 감지
+            return change.path === path || 
+                   change.path.startsWith(path + '.') ||
+                   path.startsWith(change.path + '.');
+          })),
           map(() => {
             const values = paths.map(path => getCurrentState(path));
             return mapper(...values);

@@ -1,5 +1,6 @@
 import { action, reducer } from '../../base/svelte-rx/svelte-rx.svelte.js';
-import { storePath } from '../../base/svelte-rx/store-path';
+import { storePath } from '../../entities/storePath';
+import { 텍스트업데이트 } from '../../actions/editor/text';
 
 // Actions - 한글로 작성
 export const _문서설정하기 = action<{
@@ -119,6 +120,47 @@ export const useEditorState = reducer(storePath.editor, initialState, on => {
         past: newPast,
         future: newFuture
       }
+    };
+  });
+  
+  on(텍스트업데이트, (state, { nodeId, text }) => {
+    const node = state.document.nodes.get(nodeId);
+    if (!node || node.type !== 'text') return state;
+    
+    // 히스토리에 현재 상태 저장
+    const newHistory = {
+      past: [...state.history.past, { document: state.document, selection: state.selection }],
+      future: []
+    };
+    
+    // 노드 업데이트
+    const updatedNode = { ...node, textContent: text };
+    const updatedNodes = new Map(state.document.nodes);
+    updatedNodes.set(nodeId, updatedNode);
+    
+    // 루트 노드도 업데이트 (재귀적으로 찾아서 업데이트)
+    const updateNodeInTree = (node: any): any => {
+      if (node.id === nodeId) {
+        return updatedNode;
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: node.children.map(updateNodeInTree)
+        };
+      }
+      return node;
+    };
+    
+    const updatedRoot = updateNodeInTree(state.document.root);
+    
+    return {
+      ...state,
+      document: {
+        root: updatedRoot,
+        nodes: updatedNodes
+      },
+      history: newHistory
     };
   });
 });

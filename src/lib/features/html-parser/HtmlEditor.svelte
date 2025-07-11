@@ -11,8 +11,8 @@
     _실행취소하기,
     _다시실행하기 
   } from './editorStore';
-  import EditOverlay from '../../modules/editor/EditOverlay.svelte';
   import SelectionOverlay from '../../modules/editor/SelectionOverlay.svelte';
+  import HoverOverlay from '../../modules/editor/HoverOverlay.svelte';
   import { useEditorMode } from '../../entities/editor/modeStore';
   import { _편집모드전환 } from '../../actions/editor/mode';
   import { Edit3, MousePointer } from 'lucide-svelte';
@@ -37,7 +37,7 @@
   });
   
   function handleTextClick(nodeId: string, offset: number) {
-    // 편집 모드에서는 텍스트 클릭 무시 (EditOverlay에서 처리)
+    // 편집 모드에서는 텍스트 클릭 무시 (EditableText에서 처리)
     if (isEditMode) return;
     
     // For now, just select the clicked word
@@ -132,8 +132,9 @@
     />
   {/if}
   
-  <!-- 호버 및 선택 오버레이 (선택/편집 모드 둘 다에서 작동) -->
-  <EditOverlay />
+  
+  <!-- Hover 표시 -->
+  <HoverOverlay />
   
   <!-- 선택 영역 표시 -->
   <SelectionOverlay />
@@ -150,5 +151,4 @@
   .html-editor.select-mode :global(*) {
     cursor: default !important;
   }
-  
 </style>

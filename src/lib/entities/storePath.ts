@@ -41,6 +41,10 @@ export interface StoreSchema {
     
     /** 에디터 모드 */
     mode: 'view' | 'edit' | 'select';
+    
+    /** Hover 상태 */
+    hoveredNodeId: string | null;
+    hoveredNodeType: string | null;
   };
   
   /**

@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { dispatch } from '../../base/svelte-rx/svelte-rx.svelte';
   import { useSelectedId, useBoundingRects } from '../../entities/selection/store';
-  import { _선택해제하기 } from '../../actions/selection';
   import { createRelativeBoundingRectObservable } from '../../base/dom/createRelativeBoundingRectObservable';
   import { observableState } from '../../base/svelte-rx/observableState.svelte';
   import { getTypeColor } from '../../entities/editor/colors';
+  import { useEditorMode } from '../../entities/editor/modeStore';
   
   const selectedId = $derived(useSelectedId());
   const boundingRects = $derived(useBoundingRects());
+  const editorMode = $derived(useEditorMode());
+  const isEditMode = $derived(editorMode === 'edit');
   
   // 선택된 요소를 DOM에서 찾기
   const selectedElement = $derived.by(() => {
@@ -78,20 +79,11 @@
     };
   });
   
-  function handleBackdropClick() {
-    dispatch(_선택해제하기());
-  }
 </script>
 
-<!-- 배경 클릭 시 선택 해제 (항상 표시) -->
-<div 
-  class="selection-backdrop" 
-  class:visible={selectedId}
-  onclick={handleBackdropClick}
-></div>
 
-{#if selectedId && selectedRect}
-  <!-- 선택 영역 표시 -->
+{#if selectedId && selectedRect && !isEditMode}
+  <!-- 선택 영역 표시 (편집 모드가 아닐 때만) -->
   <div 
     class="selection-overlay"
     style="
@@ -109,21 +101,6 @@
 {/if}
 
 <style>
-  .selection-backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    pointer-events: none;
-  }
-  
-  .selection-backdrop.visible {
-    z-index: 999;
-    pointer-events: auto;
-  }
-  
   .selection-overlay {
     position: absolute;
     border: 2px solid var(--type-color);

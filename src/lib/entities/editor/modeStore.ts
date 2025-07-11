@@ -36,3 +36,4 @@ export const useEditorMode = reducer(
 export const useIsEditMode = reducer('editor.isEdit', false, on => {
   on(storePath.editor.mode, (mode) => mode === 'edit')
 });
+

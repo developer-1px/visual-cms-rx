@@ -38,7 +38,7 @@ export const useBoundingRects = reducer(storePath.selection.boundingRects, {} as
 })
 
 // computed: 현재 선택된 요소의 타입
-export const useSelectedType = reducer(storePath.selection.type, null as string | null, on => {
+export const useSelectedType = reducer(storePath.selection.type, null, on => {
   // selectedId와 document.nodes가 변경될 때마다 타입 계산
   // on.combine을 사용하여 명확한 타입 추론
   on.combine(
@@ -51,8 +51,8 @@ export const useSelectedType = reducer(storePath.selection.type, null as string 
       const node = nodes.get(selectedId);
       if (!node) return null;
       
-      // node의 attributes에서 data-editable 타입 가져오기
-      return node.attributes?.['data-editable'] || null;
+      // node의 editableType 가져오기 (text, icon, button, link 등)
+      return node.editableType || null;
     }
   );
 })

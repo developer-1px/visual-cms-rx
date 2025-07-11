@@ -211,7 +211,7 @@
     if (value === null) return '#666';
     if (value === undefined) return '#666';
     if (typeof value === 'string') return '#ce9178';
-    if (typeof value === 'number') return '#b5cea8';d
+    if (typeof value === 'number') return '#b5cea8';
     if (typeof value === 'boolean') return '#569cd6';
     if (typeof value === 'function') return '#dcdcaa';
     return '#d4d4d4';

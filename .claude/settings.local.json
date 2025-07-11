@@ -36,7 +36,8 @@
       "Bash(npx vite:*)",
       "Bash(npx eslint:*)",
       "Bash(node:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(pnpm vite:*)"
     ],
     "deny": []
   }

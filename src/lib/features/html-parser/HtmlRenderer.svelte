@@ -1,5 +1,11 @@
 <script lang="ts">
   import HtmlRenderer from './HtmlRenderer.svelte';
+  import EditableText from '../../components/EditableText.svelte';
+  import EditableIcon from '../../components/EditableIcon.svelte';
+  import EditableImage from '../../components/EditableImage.svelte';
+  import EditableButton from '../../components/EditableButton.svelte';
+  import EditableLink from '../../components/EditableLink.svelte';
+  import EditableElement from '../../components/EditableElement.svelte';
   
   interface Props {
     node: any; // HtmlNode from schema
@@ -9,27 +15,6 @@
   
   let { node, selection = null, onTextClick }: Props = $props();
   
-  function handleTextClick(e: MouseEvent, nodeId: string) {
-    if (!onTextClick) return;
-    
-    const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-    if (range) {
-      onTextClick(nodeId, range.startOffset);
-    }
-  }
-  
-  function renderText(text: string, nodeId: string, isSelected: boolean) {
-    if (!isSelected || !selection) {
-      return text;
-    }
-    
-    const { start, end } = selection;
-    const before = text.slice(0, start);
-    const selected = text.slice(start, end);
-    const after = text.slice(end);
-    
-    return [before, selected, after];
-  }
   
   function reconstructSvgHTML(node: any): string {
     if (node.type === 'text') {
@@ -57,62 +42,45 @@
 </script>
 
 {#if node.type === 'text' && node.textContent}
-  {@const isSelected = selection?.nodeId === node.id}
-  {@const textParts = renderText(node.textContent, node.id, isSelected)}
-  
-  <span
-    style="display: inline-block; cursor: text;"
-    data-editable="text"
-    data-node-id={node.id}
-    onclick={(e) => handleTextClick(e, node.id)}
-  >
-    {#if Array.isArray(textParts)}
-      {textParts[0]}<span>{textParts[1]}</span>{textParts[2]}
-    {:else}
-      {textParts}
-    {/if}
-  </span>
+  <EditableText {node} />
 {:else if node.type === 'element'}
   {@const Tag = node.tagName || 'div'}
-  {@const editableType = node.attributes?.['data-editable']}
   
-  {#if Tag === 'img'}
-    <img
-      {...node.attributes}
-      data-node-id={node.id}
-      data-editable="image"
-      style="display: inline-block; cursor: pointer; {node.attributes?.style || ''}"
-    />
-  {:else if Tag === 'svg'}
-    <!-- SVG는 @html로 렌더링 (namespace 이슈 해결) -->
-    {@const svgContent = reconstructSvgHTML(node)}
-    <div 
-      data-node-id={node.id}
-      data-editable="icon"
-      style="display: inline-block; cursor: pointer; {node.attributes?.style || ''}"
-    >
-      {@html svgContent}
-    </div>
-  {:else if Tag === 'a' || Tag === 'button'}
-    <svelte:element 
-      this={Tag}
-      {...node.attributes}
-      data-node-id={node.id}
-      data-editable="link"
-      style="display: inline-block; cursor: pointer; {node.attributes?.style || ''}"
-    >
-      {#if node.children}
-        {#each node.children as child (child.id)}
-          <HtmlRenderer node={child} {selection} {onTextClick} />
-        {/each}
-      {/if}
-    </svelte:element>
+  {#if node.editableType === 'icon'}
+    <EditableIcon {node} />
+  {:else if node.editableType === 'image'}
+    <EditableImage {node} />
+  {:else if node.editableType === 'button'}
+    <EditableButton {node} />
+  {:else if node.editableType === 'link'}
+    <EditableLink {node} />
+  {:else if node.editableType === 'repeat' || node.editableType === 'section'}
+    <!-- repeat와 section 타입들 -->
+    <EditableElement {node}>
+      {#snippet children()}
+        {#if node.children}
+          {#each node.children as child (child.id)}
+            <HtmlRenderer node={child} {selection} {onTextClick} />
+          {/each}
+        {/if}
+      {/snippet}
+    </EditableElement>
+  {:else if node.editableType}
+    <!-- 기타 editable 타입들 -->
+    <EditableElement {node}>
+      {#snippet children()}
+        {#if node.children}
+          {#each node.children as child (child.id)}
+            <HtmlRenderer node={child} {selection} {onTextClick} />
+          {/each}
+        {/if}
+      {/snippet}
+    </EditableElement>
   {:else}
+    <!-- 일반 HTML 요소 (editable 아님) -->
     <svelte:element 
       this={Tag}
       {...node.attributes}
-      data-node-id={node.id}
-      data-editable={editableType}
     >
       {#if node.children}
         {#each node.children as child (child.id)}

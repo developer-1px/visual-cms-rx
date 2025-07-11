@@ -14,21 +14,16 @@
  * path.user.profile.name.toString() // "user.profile.name"
  */
 
-// Proxy를 위한 타입 - 재귀적으로 객체 구조 유지
-export type PathProxy<T> = {
-  [K in keyof T]: T[K] extends object ? PathProxy<T[K]> : T[K];
-};
-
 /**
  * 타입 안전한 경로 프록시를 생성합니다.
  * 
  * @param path - 현재까지의 경로 배열 (내부적으로 사용)
  * @returns 경로 프록시 객체
  */
-export function createPathProxy<T>(path: string[] = []): PathProxy<T> {
+export function createPathProxy<T>(path: string[] = []): T {
   const pathString = path.join('.');
-  
-  return new Proxy({} as unknown as PathProxy<T>, {
+
+  return new Proxy({}, {
     get(_, prop) {
       if (typeof prop === 'symbol') {
         if (prop === Symbol.toPrimitive) {
@@ -46,5 +41,5 @@ export function createPathProxy<T>(path: string[] = []): PathProxy<T> {
       const newPath = path.length === 0 ? [prop as string] : [...path, prop as string];
       return createPathProxy(newPath);
     }
-  });
+  }) as T
 }

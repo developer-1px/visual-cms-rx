@@ -1,3 +1,6 @@
+// 편집 가능한 요소 타입
+export type EditableType = 'text' | 'icon' | 'image' | 'button' | 'link' | 'repeat' | 'section' | null;
+
 // 에디터 관련 엔티티 타입들
 export interface HtmlNode {
   id: string;
@@ -7,6 +10,7 @@ export interface HtmlNode {
   children?: HtmlNode[];
   textContent?: string;
   parent?: string;
+  editableType?: EditableType; // 편집 가능한 요소의 타입
 }
 
 export interface TextSelection {
